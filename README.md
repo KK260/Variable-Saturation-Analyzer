@@ -1,5 +1,5 @@
 # saturation-of-diversity-variables
-Rarefaction-like analyses to calculate saturation of diversity variables (intraspecific functional trait diversity, within-habitat heterogeneity and genetic diversity based on SSR data
+Rarefaction-like analyses to calculate saturation of diversity variables
 
 This code repository includes an R script used in Karbstein et al. (submitted) to calculate saturation of diversity variables per population/location (intraspecific functional trait diversity, within-habitat heterogeneity and genetic diversity based on SSR data (rarefaction-like analyses).  
 
