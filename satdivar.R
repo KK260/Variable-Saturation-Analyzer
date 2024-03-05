@@ -1,418 +1,135 @@
-####FD (intraspecific functional trait diversity of populations) ####
+### This code repository contains an R script used in Karbstein et al. 2020 (https://onlinelibrary.wiley.com/doi/abs/10.1002/ece3.6255) to calculate saturation of diversity variables per population/location (intraspecific functional trait diversity, genetic diversity based on microsatellite/SSR data and within-habitat heterogeneity (rarefaction-like analyses).
+
+#set working directory where R script is located, for example
+setwd("~/example/test/")
 
 
-##### data import#####
+#### saturation of intraspecific functional trait diversity (iDFCV) ####
 
-#set working directory where csv*files are located
+# create directory "genetic_diversity"
+main_directory <- "~/example/test"
 
+source_file <- "functional_traits.csv"
+destination_directory <- "functional_trait_diversity"
+
+# check if the destination directory exists, if not create it
+if (!file.exists(destination_directory)) {
+  dir.create(destination_directory)
+}
+
+# copy the file to the destination directory
+file.copy(source_file, paste0(destination_directory, "/", source_file))
+
+
+#set working directory where csv*files are located, for example
+
+setwd("~/example/test/genetic_diversity")
+
+if (!requireNamespace("adegenet", quietly = TRUE))
+  install.packages("adegenet", repo="http://cran.rstudio.com/")
+library(adegenet)
+
+#### import data ####
 
 dat_1<-read.csv("functional_traits.csv", header=TRUE, sep = ",", dec=".")
 
+# check data
 head(dat_1)
 tail(dat_1)
 
 str(dat_1)
 summary(dat_1)
 
-#install.packages("dplyr")
+if (!requireNamespace("dplyr", quietly = TRUE))
+  install.packages("dplyr", repo="http://cran.rstudio.com/")
 library(dplyr)
 
 
-####total####
+#### calculate functional trait diversity (iFDCV) between sample size 1-20 ####
 
-new1<-NULL
-subset_i<-NULL
 
-for(k in 1:100) { # number of replicates
-  
-  for(i in 1:20) { ##sample size
-  
-  subset_i<- dat_1 %>% group_by(dat_1$location) %>%   sample_n(size = i)
-  
-  
-  ####calculate coefficients of variation of functional traits per population (location)
-  
-  
-  # RH
-  
-  new1$varK_RH<- tapply(subset_i$RH, subset_i$location, sd, na.rm=TRUE)/tapply(subset_i$RH, subset_i$location, mean, na.rm=TRUE)
-  
-  
-  
-  # AGB
-  
-  new1$varK_AGB<-tapply(subset_i$AGB, subset_i$location, sd, na.rm=TRUE)/tapply(subset_i$AGB, subset_i$location, mean, na.rm=TRUE)
-  
-  
-  
-  
-  # LA
-  new1$varK_LA<-tapply(subset_i$LA, subset_i$location, sd, na.rm=TRUE)/tapply(subset_i$LA, subset_i$location, mean, na.rm=TRUE)
-  
-  
-  
-  # SLA
-  new1$varK_SLA<-tapply(subset_i$SLA, subset_i$location, sd, na.rm=TRUE)/tapply(subset_i$SLA, subset_i$location, mean, na.rm=TRUE)
-  
-  
-  
-  # LDMC
-  new1$varK_LDMC<-tapply(subset_i$LDMC, subset_i$location, sd, na.rm=TRUE)/tapply(subset_i$LDMC, subset_i$location, mean, na.rm=TRUE)
-  
-  
-  
-  
-  # Fv/Fm
-  new1$varK_FvFm<-tapply(subset_i$FvFm, subset_i$location, sd, na.rm=TRUE)/tapply(subset_i$FvFm, subset_i$location, mean, na.rm=TRUE)
-  
-  
-  
-  
-  # PI
-  new1$varK_PI<-tapply(subset_i$PI, subset_i$location, sd, na.rm=TRUE)/tapply(subset_i$PI, subset_i$location, mean, na.rm=TRUE)
-  
-  
-  
-  
-  # SPS
-  
-  new1$varK_SPS<-tapply(subset_i$SPS, subset_i$location, sd, na.rm=TRUE)/tapply(subset_i$SPS, subset_i$location, mean, na.rm=TRUE)
-  
-  
-  
-  # SPI
-  
-  new1$varK_SPI<-tapply(subset_i$SPI, subset_i$location, sd, na.rm=TRUE)/tapply(subset_i$SPI, subset_i$location, mean, na.rm=TRUE)
-  
-  
-  write.csv(new1, file=paste(i, k, "functional_traits_CV_diver_sat.csv", sep="_"))# write all combinations of iterations and sample size in the local directory
- 
-   
-###merge all replicates per sample sizes (I recommend to create subfolders for each sample size)
+# initialize results list
+results <- list()
+
+# create list of traits
+traits <- unique(colnames(dat_1[, 3:11]))
+
+for (k in 1:100) {  # replicates
+  for (i in 1:20) {  # sample size range
+    # Convert 'i' to a string with two digits
+    i_str <- sprintf("%02d", i)
     
-}
-}
-#1
-setwd("~/Desktop/test of diversity saturation/FD/1")
-
-temp = list.files(pattern="*.csv")
-for (i in 1:length(temp)) assign(temp[i], read.csv(temp[i]))
-
-mypath="~/Desktop/test of diversity saturation/FD/1"
-multmerge = function(mypath){
-  filenames=list.files(path=mypath, full.names=TRUE)
-  datalist = lapply(filenames, function(x){read.csv(file=x,header=T)})
-  Reduce(function(x,y) {merge(x,y,all = TRUE)}, datalist)
-}
-
-full_data = multmerge("~/Desktop/test of diversity saturation/FD/1/merged.csv")
-
-
-
-mymergeddata_1 = multmerge("~/Desktop/test of diversity saturation/FD/1/")
-
-res_1<-aggregate(mymergeddata_1[, 2:10], list(mymergeddata_1$X), mean)# ignore first column because its non-numeric
-
-
-mymergeddata_2 = multmerge("~/Desktop/test of diversity saturation/FD/2/")
-res_2<-aggregate(mymergeddata_2[, 2:10], list(mymergeddata_2$X), mean, na.rm=TRUE)
-
-mymergeddata_3 = multmerge("~/Desktop/test of diversity saturation/FD/3/")
-res_3<-aggregate(mymergeddata_3[, 2:10], list(mymergeddata_3$X), mean, na.rm=TRUE)
-
-
-mymergeddata_4 = multmerge("~/Desktop/test of diversity saturation/FD/4/")
-res_4<-aggregate(mymergeddata_4[, 2:10], list(mymergeddata_4$X), mean, na.rm=TRUE)
-
-mymergeddata_5 = multmerge("~/Desktop/test of diversity saturation/FD/5/")
-res_5<-aggregate(mymergeddata_5[, 2:10], list(mymergeddata_5$X), mean, na.rm=TRUE)
-
-mymergeddata_6 = multmerge("~/Desktop/test of diversity saturation/FD/6/")
-res_6<-aggregate(mymergeddata_6[, 2:10], list(mymergeddata_6$X), mean, na.rm=TRUE)
-
-mymergeddata_7 = multmerge("~/Desktop/test of diversity saturation/FD/7/")
-res_7<-aggregate(mymergeddata_7[, 2:10], list(mymergeddata_7$X), mean, na.rm=TRUE)
-
-mymergeddata_8 = multmerge("~/Desktop/test of diversity saturation/FD/8/")
-res_8<-aggregate(mymergeddata_8[, 2:10], list(mymergeddata_8$X), mean, na.rm=TRUE)
-
-mymergeddata_9 = multmerge("~/Desktop/test of diversity saturation/FD/9/")
-res_9<-aggregate(mymergeddata_9[, 2:10], list(mymergeddata_9$X), mean, na.rm=TRUE)
-
-mymergeddata_10 = multmerge("~/Desktop/test of diversity saturation/FD/10/")
-res_10<-aggregate(mymergeddata_10[, 2:10], list(mymergeddata_10$X), mean, na.rm=TRUE)
-
-mymergeddata_11 = multmerge("~/Desktop/test of diversity saturation/FD/11/")
-res_11<-aggregate(mymergeddata_11[, 2:10], list(mymergeddata_11$X), mean, na.rm=TRUE)
-
-mymergeddata_12 = multmerge("~/Desktop/test of diversity saturation/FD/12/")
-res_12<-aggregate(mymergeddata_12[, 2:10], list(mymergeddata_12$X), mean, na.rm=TRUE)
-
-mymergeddata_13 = multmerge("~/Desktop/test of diversity saturation/FD/13/")
-res_13<-aggregate(mymergeddata_13[, 2:10], list(mymergeddata_13$X), mean, na.rm=TRUE)
-
-
-mymergeddata_14 = multmerge("~/Desktop/test of diversity saturation/FD/14/")
-res_14<-aggregate(mymergeddata_14[, 2:10], list(mymergeddata_14$X), mean, na.rm=TRUE)
-
-mymergeddata_15 = multmerge("~/Desktop/test of diversity saturation/FD/15/")
-res_15<-aggregate(mymergeddata_15[, 2:10], list(mymergeddata_15$X), mean, na.rm=TRUE)
-
-mymergeddata_16 = multmerge("~/Desktop/test of diversity saturation/FD/16/")
-res_16<-aggregate(mymergeddata_16[, 2:10], list(mymergeddata_16$X), mean, na.rm=TRUE)
-
-mymergeddata_17 = multmerge("~/Desktop/test of diversity saturation/FD/17/")
-res_17<-aggregate(mymergeddata_17[, 2:10], list(mymergeddata_17$X), mean, na.rm=TRUE)
-
-mymergeddata_18 = multmerge("~/Desktop/test of diversity saturation/FD/18/")
-res_18<-aggregate(mymergeddata_18[, 2:10], list(mymergeddata_18$X), mean, na.rm=TRUE)
-
-mymergeddata_19 = multmerge("~/Desktop/test of diversity saturation/FD/19/")
-res_19<-aggregate(mymergeddata_19[, 2:10], list(mymergeddata_19$X), mean, na.rm=TRUE)
-
-mymergeddata_20 = multmerge("~/Desktop/test of diversity saturation/FD/20/")
-res_20<-aggregate(mymergeddata_20[, 2:10], list(mymergeddata_20$X), mean, na.rm=TRUE)
-
-
-
-
-
-
-write.csv(res_1, file="merged_1.csv")
-write.csv(res_2, file="merged_2.csv")
-write.csv(res_3, file="merged_3.csv")
-write.csv(res_4, file="merged_4.csv")
-write.csv(res_5, file="merged_5.csv")
-write.csv(res_6, file="merged_6.csv")
-write.csv(res_7, file="merged_7.csv")
-write.csv(res_8, file="merged_8.csv")
-write.csv(res_9, file="merged_9.csv")
-write.csv(res_10, file="merged_10.csv")
-write.csv(res_11, file="merged_11.csv")
-write.csv(res_12, file="merged_12.csv")
-write.csv(res_13, file="merged_13.csv")
-write.csv(res_14, file="merged_14.csv")
-write.csv(res_15, file="merged_15.csv")
-write.csv(res_16, file="merged_16.csv")
-write.csv(res_17, file="merged_17.csv")
-write.csv(res_18, file="merged_18.csv")
-write.csv(res_19, file="merged_19.csv")
-write.csv(res_20, file="merged_20.csv")
-
-
-full_data_2 = multmerge("~/Desktop/test of diversity saturation/FD/res")
-full_data_2$replicate<-c(2:20,1,2:20,1,2:20,1,2:20,1,2:20,1,2:20,1,2:20,1,2:20,1,2:20,1,2:20,1,2:20,1,2:20,1, 2:20,1)
-
-write.csv(full_data_2, file="final.csv")
-
-
-
-#install.packages("Rfast")
-library(Rfast)
-
-full_data_3<-read.csv(file="final.csv")
-
-full_data_3$ifd_cv<-rowMeans(full_data_3[4:12], na.rm=TRUE)
-#final$mean <- rowMeans(final, na.rm=TRUE)
-
-
-
-plot(full_data_3$ifd_cv ~ full_data_3$replicate, type="p", pch=16, cex=2.5, cex.lab=1.5, cex.axis=1.5, xlab="no. of X", ylab=main=expression("IFDCV"[2]), main="KW", cex.main=1.5)
-
-
-
-#subets
-
-dat_Ba<-subset(full_data_3, full_data_3$Group.1=="Ba")
-dat_Bo<-subset(full_data_3, full_data_3$Group.1=="Bo")
-dat_Di<-subset(full_data_3, full_data_3$Group.1=="Di")
-dat_Eh<-subset(full_data_3, full_data_3$Group.1=="Eh")
-dat_Er<-subset(full_data_3, full_data_3$Group.1=="Er")
-dat_Gr<-subset(full_data_3, full_data_3$Group.1=="Gr")
-dat_Ha<-subset(full_data_3, full_data_3$Group.1=="Ha")
-dat_If<-subset(full_data_3, full_data_3$Group.1=="If")
-dat_KW<-subset(full_data_3, full_data_3$Group.1=="KW")
-dat_Ni<-subset(full_data_3, full_data_3$Group.1=="Ni")
-dat_Sa<-subset(full_data_3, full_data_3$Group.1=="Sa")
-dat_St<-subset(full_data_3, full_data_3$Group.1=="St")
-dat_Wo<-subset(full_data_3, full_data_3$Group.1=="Wo")
-
-
-# plot
-par(mar=c(5.1,4.1,4.1,2.1) +  0.4)
-
-par(mfrow=c(3,5))
-
-plot(dat_KW$ifd_cv ~ dat_KW$replicate, type="p", pch=16, cex=2.5, cex.lab=1.5, cex.axis=1.5, xlab="no. of samples", ylab=expression("iFD"[CV]), main="KW", cex.main=1.5)
-
-plot(dat_Bo$ifd_cv ~ dat_Bo$replicate, type="p", pch=16, cex=2.5, cex.lab=1.5, cex.axis=1.5, xlab="no. of samples", ylab=expression("iFD"[CV]), main="Bo", cex.main=1.5)
-
-
-
-
-
-plot(dat_Ha$ifd_cv ~ dat_Ha$replicate, type="p", pch=16, cex=2.5, cex.lab=1.5, cex.axis=1.5, xlab="no. of samples", ylab=expression("iFD"[CV]), main="Ha", cex.main=1.5)
-
-
-
-plot(dat_Wo$ifd_cv ~ dat_Wo$replicate, type="p", pch=16, cex=2.5, cex.lab=1.5, cex.axis=1.5, xlab="no. of samples", ylab=expression("iFD"[CV]), main="Wo", cex.main=1.5)
-
-
-plot(dat_Ba$ifd_cv ~ dat_Ba$replicate, type="p", pch=16, cex=2.5, cex.lab=1.5, cex.axis=1.5, xlab="no. of samples", ylab=expression("iFD"[CV]), main="Ba", cex.main=1.5)
-
-
-plot(dat_St$ifd_cv ~ dat_St$replicate, type="p", pch=16, cex=2.5, cex.lab=1.5, cex.axis=1.5, xlab="no. of samples", ylab=expression("iFD"[CV]), main="St", cex.main=1.5)
-
-
-plot(dat_Sa$ifd_cv ~ dat_Sa$replicate, type="p", pch=16, cex=2.5, cex.lab=1.5, cex.axis=1.5, xlab="no. of samples", ylab=expression("iFD"[CV]), main="Sa", cex.main=1.5)
-
-
-plot(dat_If$ifd_cv ~ dat_If$replicate, type="p", pch=16, cex=2.5, cex.lab=1.5, cex.axis=1.5, xlab="no. of samples", ylab=expression("iFD"[CV]), main="If", cex.main=1.5)
-
-
-
-
-plot(dat_Ni$ifd_cv ~ dat_Ni$replicate, type="p", pch=16, cex=2.5, cex.lab=1.5, cex.axis=1.5, xlab="no. of samples", ylab=expression("iFD"[CV]), main="Ni", cex.main=1.5)
-
-
-
-plot(dat_Di$ifd_cv ~ dat_Di$replicate, type="p", pch=16, cex=2.5, cex.lab=1.5, cex.axis=1.5, xlab="no. of samples", ylab=expression("iFD"[CV]), main="Di", cex.main=1.5)
-
-
-
-
-
-plot(dat_Er$ifd_cv ~ dat_Er$replicate, type="p", pch=16, cex=2.5, cex.lab=1.5, cex.axis=1.5, xlab="no. of samples", ylab=expression("iFD"[CV]), main="Er", cex.main=1.5)
-
-
-
-plot(dat_Gr$ifd_cv ~ dat_Gr$replicate, type="p", pch=16, cex=2.5, cex.lab=1.5, cex.axis=1.5, xlab="no. of samples", ylab=expression("iFD"[CV]), main="Gr", cex.main=1.5)
-
-
-plot(dat_Eh$ifd_cv ~ dat_Eh$replicate, type="p", pch=16, cex=2.5, cex.lab=1.5, cex.axis=1.5, xlab="no. of samples", ylab=expression("iFD"[CV]), main="Eh", cex.main=1.5)
-
-
-
-
-
-
-
-
-
-
-#### HD (within-habitat heterogeneity of locations)####
-
-
-##### data import#####
-
-#set working directory where csv*files are located
-
-setwd("~/Desktop/test of diversity saturation/HD")
-
-dat_1<-read.csv("environmental_parameters.csv", header=TRUE, sep = ",", dec=".")
-
-head(dat_1)
-tail(dat_1)
-
-str(dat_1)
-summary(dat_1)
-
-#install.packages("dplyr")
-library(dplyr)
-
-
-dat_1<-read.csv("environmental_parameters.csv", header=TRUE, sep = ",", dec=".")
-
-head(dat_1)
-tail(dat_1)
-
-str(dat_1)
-summary(dat_1)
-
-
-####total####
-
-new1<-NULL
-subset_i<-NULL
-
-for(k in 1:100){ #number of replicates
-  
-  for(i in 1:5) { #sample size per location
+    # sample data
+    subset_i <- dat_1 %>%
+      group_by(location) %>%
+      sample_n(size = i)
     
-    subset_i<- dat_1 %>% group_by(dat_1$location) %>%   sample_n(size = i)
+    new1 <- NULL  # initialize new1 within the loop
     
+    for (trait in traits) {
+      # calculate coefficient of variation per trait, sample size range, and iteration
+      varK_trait <- tapply(subset_i[[trait]], subset_i$location, sd, na.rm = TRUE) / 
+        tapply(subset_i[[trait]], subset_i$location, mean, na.rm = TRUE)
+      # store results in new1
+      new1[[paste0("varK_", trait)]] <- varK_trait
+    }
     
+    # append new1 to the results list
+    results[[paste(i_str, k, "functional_traits_CV_diversity.csv", sep = "_")]] <- new1
     
-    
-    
-    # altitude
-    
-    new1$varK_RH<- tapply(subset_i$altitude, subset_i$location, sd, na.rm=TRUE)/tapply(subset_i$altitude, subset_i$location, mean, na.rm=TRUE)
-    
-    
-    
-    # slope
-    
-    new1$varK_slope<-tapply(subset_i$slope, subset_i$location, sd, na.rm=TRUE)/tapply(subset_i$slope, subset_i$location, mean, na.rm=TRUE)
-    
-    
-    
-    
-    # soil_depth
-    new1$varK_soil_depth<-tapply(subset_i$soil_depth, subset_i$location, sd, na.rm=TRUE)/tapply(subset_i$soil_depth, subset_i$location, mean, na.rm=TRUE)
-    
-    
-    
-    # lai
-    new1$varK_lai<-tapply(subset_i$lai, subset_i$location, sd, na.rm=TRUE)/tapply(subset_i$lai, subset_i$location, mean, na.rm=TRUE)
-    
-    
-    
-    # exposition
-    new1$varK_exposition<-tapply(subset_i$exposition, subset_i$location, sd, na.rm=TRUE)/tapply(subset_i$exposition, subset_i$location, mean, na.rm=TRUE)
-    
-    
-    
-    
-    # CECpot
-    new1$varK_CECpot<-tapply(subset_i$CECpot, subset_i$location, sd, na.rm=TRUE)/tapply(subset_i$CECpot, subset_i$location, mean, na.rm=TRUE)
-    
-    
-    
-    
-    # pHH20
-    new1$varK_pHH20<-tapply(subset_i$pHH20, subset_i$location, sd, na.rm=TRUE)/tapply(subset_i$pHH20, subset_i$location, mean, na.rm=TRUE)
-    
-    
-    
-    
-    # N
-    
-    new1$varK_N<-tapply(subset_i$N, subset_i$location, sd, na.rm=TRUE)/tapply(subset_i$N, subset_i$location, mean, na.rm=TRUE)
-    
-    
-    
-    # P
-    
-    new1$varK_P<-tapply(subset_i$P, subset_i$location, sd, na.rm=TRUE)/tapply(subset_i$P, subset_i$location, mean, na.rm=TRUE)
-    
-   
-    new1$varK_K<-tapply(subset_i$K, subset_i$location, sd, na.rm=TRUE)/tapply(subset_i$K, subset_i$location, mean, na.rm=TRUE)
-    
-     
-    write.csv(new1, file=paste(i, k, "habitat_heterogeneity_CV_diver_sat.csv", sep="_"))
-    
-###merge all replicates per sample sizes (I recommend to create subfolders for each sample size)
-    
+    # write output
+    write.csv(new1, file = paste(i_str, k, "functional_traits_CV_diversity.csv", sep = "_"))
   }
 }
-#1
-#setwd("~/Desktop/test of diversity saturation/HD/1")
 
-#temp = list.files(pattern="*.csv")
-#for (i in 1:length(temp)) assign(temp[i], read.csv(temp[i]))
 
-#mypath="~/Desktop/test of diversity saturation/FD/1"
+## create 20 folders and copy files into it
+#give directory name here
+directory <- "~/example/test/functional_trait_diversity/"
+
+
+# check whether directory exists
+if (!file.exists(directory)) {
+  dir.create(directory)
+}
+
+
+# create folders in directory
+for (i in 1:20) {
+  folder_name <- sprintf("%02d", i)  # format the number with leading zeros
+  dir.create(file.path(directory, folder_name), recursive = TRUE)
+}
+
+# create list of all subdirectories
+target_subdirectories <- list.dirs(directory, full.names = TRUE, recursive = FALSE)
+
+
+# copy files to respective folder
+files <- list.files(directory, pattern = "^\\d+_.*\\.csv$", full.names = TRUE)
+
+
+# iterate over data
+for (file in files) {
+  file_name <- basename(file)
+  
+  # extract prefix (e.g., "1_", "2_", etc.)
+  prefix <- substr(file_name, 1, 2)
+  
+  # set target directory based on prefix
+  target_subdirectory <- file.path(directory, prefix)
+  
+  # check whether target directory exists, or create one if not 
+  if (!file.exists(target_subdirectory)) {
+    dir.create(target_subdirectory)
+  }
+  # copy to target_subdirectory
+  file.rename(file, file.path(target_subdirectory, file_name))
+  # or:
+  # file.copy(file, file.path(target_subdirectory, file_name))
+}
+
+
+# merge data per category (01:20)
 
 multmerge = function(mypath){
   filenames=list.files(path=mypath, full.names=TRUE)
@@ -420,146 +137,148 @@ multmerge = function(mypath){
   Reduce(function(x,y) {merge(x,y,all = TRUE)}, datalist)
 }
 
-#full_data = multmerge("~/Desktop/test of diversity saturation/FD/1/merged.csv")
+
+for(i in sprintf("%02d", 1:20)) {
+  mymergeddata_i <- multmerge(paste("~/example/test/functional_trait_diversity/", i, sep = ""))
+  
+  res_i <- aggregate(mymergeddata_i[, 2], list(mymergeddata_i$X), mean)
+  
+  write.csv(res_i, file = paste("merged_", i, ".csv", sep = ""))
+  
+}
+
+
+# create results folder and move intermediate files "merged_*.csv into it 
+
+# create folders in directory
+dir.create(file.path(directory, "results"), recursive = TRUE)
+
+current_directories = list.dirs(directory, full.names = TRUE, recursive = FALSE)
+
+results_directory <- grep("results", current_directories, value = TRUE)
+
+files <- list.files(directory, pattern = "^merged_[0-9]{2}\\.csv$", full.names = TRUE)
+
+# move files to the destination directory
+for (file in files) {
+  file.rename(file, file.path("results", basename(file)))
+}
 
 
 
-mymergeddata_1 = multmerge("~/Desktop/test of diversity saturation/HD/1/")
-res_1<-aggregate(mymergeddata_1[, 2:11], list(mymergeddata_1$X), mean)
+results = multmerge("~/example/test/functional_trait_diversity/results/")
 
+# replicate size = 1 can only lead to CV=0 (NA) (in contrast, in GD, replicate size = 1 leads to positive HE values because genotypes can be heterozygous)
 
-mymergeddata_2 = multmerge("~/Desktop/test of diversity saturation/HD/2/")
-res_2<-aggregate(mymergeddata_2[, 2:11], list(mymergeddata_2$X), mean, na.rm=TRUE)
+tapply(results$x, results$Group.1, length)
 
-mymergeddata_3 = multmerge("~/Desktop/test of diversity saturation/HD/3/")
-res_3<-aggregate(mymergeddata_3[, 2:11], list(mymergeddata_3$X), mean, na.rm=TRUE)
+temp <- rep(c(2:20, 1), times = 13)
 
+temp <- temp[-c(78,79,119)] # remove Eh=19,20, Gr=20
 
-mymergeddata_4 = multmerge("~/Desktop/test of diversity saturation/HD/4/")
-res_4<-aggregate(mymergeddata_4[, 2:11], list(mymergeddata_4$X), mean, na.rm=TRUE)
+results$replicate <- temp
 
-mymergeddata_5 = multmerge("~/Desktop/test of diversity saturation/HD/5/")
-res_5<-aggregate(mymergeddata_5[, 2:11], list(mymergeddata_5$X), mean, na.rm=TRUE)
+results$x[is.na(results$x)] <- 0
 
-write.csv(res_1, file="merged_1.csv")
-write.csv(res_2, file="merged_2.csv")
-write.csv(res_3, file="merged_3.csv")
-write.csv(res_4, file="merged_4.csv")
-write.csv(res_5, file="merged_5.csv")
-
-
-full_data_2 = multmerge("~/Desktop/test of diversity saturation/HD/res")
-full_data_2$replicate<-c(2:5,1,2:5,1,2:5,1,2:5,1,2:5,1,2:5,1,2:5,1,2:5,1,2:5,1,2:5,1,2:5,1,2:5,1, 2:5,1)
-
-write.csv(full_data_2, file="final.csv")
+write.csv(results, file="intraspecific_trait_diversity_iFDCV.csv")
 
 
 
-#install.packages("Rfast")
+#### plot saturation curves ####
+
+if (!requireNamespace("Rfast", quietly = TRUE))
+  install.packages("Rfast", repo="http://cran.rstudio.com/")
 library(Rfast)
 
-full_data_3<-read.csv(file="final.csv")
 
-full_data_3$ifd_cv<-rowMeans(full_data_3[4:13], na.rm=TRUE)
+### iFDCV ~ number of chosen samples (across all 13 populations)
 
-
-#final$mean <- rowMeans(final, na.rm=TRUE)
+#plot(results$x ~ results$replicate, type="p", pch=16, cex=1.0, cex.lab=1.5, cex.axis=1.5, xlab="no. of X", ylab="iFDCV", main="total", cex.main=1.5)
 
 
+# create subets and plots 
 
-plot(full_data_3$ifd_cv ~ full_data_3$replicate, type="p", pch=16, cex=2.5, cex.lab=1.5, cex.axis=1.5, xlab="no. of X", ylab="HD", main="KW", cex.main=1.5)
+# create list of group/pop_ids given in "results"
+group_values <- unique(results$Group.1)
 
+# create an empty list to store subsets
+dat_list <- list()
 
-
-#subets
-
-dat_Ba<-subset(full_data_3, full_data_3$Group.1=="Ba")
-dat_Bo<-subset(full_data_3, full_data_3$Group.1=="Bo")
-dat_Di<-subset(full_data_3, full_data_3$Group.1=="Di")
-dat_Eh<-subset(full_data_3, full_data_3$Group.1=="Eh")
-dat_Er<-subset(full_data_3, full_data_3$Group.1=="Er")
-dat_Gr<-subset(full_data_3, full_data_3$Group.1=="Gr")
-dat_Ha<-subset(full_data_3, full_data_3$Group.1=="Ha")
-dat_If<-subset(full_data_3, full_data_3$Group.1=="If")
-dat_KW<-subset(full_data_3, full_data_3$Group.1=="KW")
-dat_Ni<-subset(full_data_3, full_data_3$Group.1=="Ni")
-dat_Sa<-subset(full_data_3, full_data_3$Group.1=="Sa")
-dat_St<-subset(full_data_3, full_data_3$Group.1=="St")
-dat_Wo<-subset(full_data_3, full_data_3$Group.1=="Wo")
+# loop over each unique group value and create subsets
+for (group_value in group_values) {
+  # subset the results based on the current group value
+  dat_list[[group_value]] <- subset(results, Group.1 == group_value)
+}
 
 
-# plot
+# create an empty list to store the plots
+plot_list <- list()
+
+# set graphic parameters
 
 par(mar=c(5.1,4.1,4.1,2.1) +  0.4)
-par(mfrow=c(3,5))
+par(mfrow=c(4,4))
 
-plot(dat_KW$ifd_cv ~ dat_KW$replicate, type="p", pch=16, cex=2.5, cex.lab=1.5, cex.axis=1.5, xlab="no. of samples", ylab="HD", main="KW", cex.main=1.5)
-
-plot(dat_Bo$ifd_cv ~ dat_Bo$replicate, type="p", pch=16, cex=2.5, cex.lab=1.5, cex.axis=1.5, xlab="no. of samples", ylab="HD", main="Bo", cex.main=1.5)
-
-
-
-
-
-plot(dat_Ha$ifd_cv ~ dat_Ha$replicate, type="p", pch=16, cex=2.5, cex.lab=1.5, cex.axis=1.5, xlab="no. of samples", ylab="HD", main="Ha", cex.main=1.5)
-
-
-
-plot(dat_Wo$ifd_cv ~ dat_Wo$replicate, type="p", pch=16, cex=2.5, cex.lab=1.5, cex.axis=1.5, xlab="no. of samples", ylab="HD", main="Wo", cex.main=1.5)
-
-
-plot(dat_Ba$ifd_cv ~ dat_Ba$replicate, type="p", pch=16, cex=2.5, cex.lab=1.5, cex.axis=1.5, xlab="no. of samples", ylab="HD", main="Ba", cex.main=1.5)
-
-
-plot(dat_St$ifd_cv ~ dat_St$replicate, type="p", pch=16, cex=2.5, cex.lab=1.5, cex.axis=1.5, xlab="no. of samples", ylab="HD", main="St", cex.main=1.5)
-
-
-plot(dat_Sa$ifd_cv ~ dat_Sa$replicate, type="p", pch=16, cex=2.5, cex.lab=1.5, cex.axis=1.5, xlab="no. of samples", ylab="HD", main="Sa", cex.main=1.5)
-
-
-plot(dat_If$ifd_cv ~ dat_If$replicate, type="p", pch=16, cex=2.5, cex.lab=1.5, cex.axis=1.5, xlab="no. of samples", ylab="HD", main="If", cex.main=1.5)
+# loop over each unique group value and create plots
+for (group_value in group_values) {
+  # extract the subset corresponding to the current group value
+  subset_data <- dat_list[[group_value]]
+  
+  # create a plot for the current subset
+  plot_list[[group_value]] <- plot(subset_data$replicate, subset_data$x, type="p", pch=16, cex=1.5, cex.lab=1.5, cex.axis=1.5, xlab="no. of samples", ylab="iFDCV", main=group_value, cex.main=1.5)
+  
+  #### Assuming you have models fitted for each group value
+  # Here's a placeholder for the predict function
+  # Replace it with your actual model and prediction code
+  #predicted_values <- predict(model, newdata = subset_data)
+  
+  # Draw lines based on predicted values
+  #lines(subset_data$x, predicted_values, col = "red")
+  
+  # Store the plot in the plot_list
+  #plot_list[[group_value]] <- recordPlot()
+  
+  # Close the current plot
+  #dev.off()
+}
 
 
 
 
-plot(dat_Ni$ifd_cv ~ dat_Ni$replicate, type="p", pch=16, cex=2.5, cex.lab=1.5, cex.axis=1.5, xlab="no. of samples", ylab="HD", main="Ni", cex.main=1.5)
+##################
+
+#### saturation of genetic diversity (GD) ####
+
+#set working directory where R script is located, for example
+setwd("~/example/test/")
+
+# create directory "genetic_diversity"
+main_directory <- "~/example/test/"
+source_file <- "t_montanum_genepop.GEN"
+destination_directory <- "genetic_diversity"
+
+# check if the destination directory exists, if not create it
+if (!file.exists(destination_directory)) {
+  dir.create(destination_directory)
+}
+
+# copy the file to the destination directory
+file.copy(source_file, paste0(destination_directory, "/", source_file))
 
 
+# set working directory where csv*files are located, for example
 
-plot(dat_Di$ifd_cv ~ dat_Di$replicate, type="p", pch=16, cex=2.5, cex.lab=1.5, cex.axis=1.5, xlab="no. of samples", ylab="HD", main="Di", cex.main=1.5)
+setwd("~/example/test/genetic_diversity")
 
-
-
-
-
-plot(dat_Er$ifd_cv ~ dat_Er$replicate, type="p", pch=16, cex=2.5, cex.lab=1.5, cex.axis=1.5, xlab="no. of samples", ylab="HD", main="Er", cex.main=1.5)
-
-
-
-plot(dat_Gr$ifd_cv ~ dat_Gr$replicate, type="p", pch=16, cex=2.5, cex.lab=1.5, cex.axis=1.5, xlab="no. of samples", ylab="HD", main="Gr", cex.main=1.5)
-
-
-plot(dat_Eh$ifd_cv ~ dat_Eh$replicate, type="p", pch=16, cex=2.5, cex.lab=1.5, cex.axis=1.5, xlab="no. of samples", ylab="HD", main="Eh", cex.main=1.5)
-
-
-
-
-####GD (genetic diversity (or expected heterozygosity) based on SSR data ####
-
-
-##### data import#####
-
-#set working directory where csv*files are located
-
-#install.packages("adegenet")
+if (!requireNamespace("adegenet", quietly = TRUE))
+  install.packages("adegenet", repo="http://cran.rstudio.com/")
 library(adegenet)
 
-setwd("~/Desktop/test of diversity saturation/GD")
-
-dat_1 <- import2genind("T_montanum_genepop.GEN", ncode = 2L, quiet = FALSE)
-
+#### import data ####
+dat_1 <- import2genind("t_montanum_genepop.GEN", ncode = 2L, quiet = FALSE)
 
 
+# check data structure
 head(dat_1)
 tail(dat_1)
 
@@ -567,24 +286,22 @@ str(dat_1)
 summary(dat_1)
 
 
-
-#install.packages("dplyr")
+if (!requireNamespace("dplyr", quietly = TRUE))
+  install.packages("dplyr", repo="http://cran.rstudio.com/")
 library(dplyr)
 
 
-####total####
-
-
+#### calculate genetic diversity between sample size 1-18 ####
 
 new1<-NULL
 subset_i<-NULL
 
-for(k in 1:100){ #number of replicates
+for(k in 1:100){ # 100 replicates
   
-  for(i in 1:18) { #sample size
+  for(i in sprintf("%02d", 1:18)) { # sample size 1-18
     
     
-    foo <- seppop(dat_1)#seperate pops
+    foo <- seppop(dat_1)# seperate pops
     foo
     
     mySamp <- lapply(foo, function(x) x[sample(1:nrow(x$tab), i)])
@@ -593,17 +310,62 @@ for(k in 1:100){ #number of replicates
     
     x <- repool(mySamp)# put subsamples back to genind object
     
-    new1<-Hs(genind2genpop(x))
+    new1<-Hs(genind2genpop(x))# calculate expected heterozygosity
     
-    write.csv(new1, file=paste(i,k, "genetic_diversity.csv", sep="_"))
-   
-    
-     ###merge all replicates per sample sizes (I recommend to create subfolders for each sample        size)
+    write.csv(new1, file=paste(i,k, "genetic_diversity.csv", sep="_"))# table called "18_100_genetic_diversity.csv"
     
     
   }
 }
 
+## create 18 folders and copy files therein
+# give directory name here
+directory <- "~/example/test/genetic_diversity/"
+
+
+# check whether directory exists
+if (!file.exists(directory)) {
+  dir.create(directory)
+}
+
+
+# create folders in directory
+for (i in 1:18) {
+  folder_name <- sprintf("%02d", i)  # format the number with leading zeros
+  dir.create(file.path(directory, folder_name), recursive = TRUE)
+}
+
+# create list of all subdirectories
+target_subdirectories <- list.dirs(directory, full.names = TRUE, recursive = FALSE)
+
+
+# copy files to respective folder
+files <- list.files(directory, pattern = "^\\d+_.*\\.csv$", full.names = TRUE)
+
+
+# iterate over data
+for (file in files) {
+  # extract prefix
+  file_name <- basename(file)
+  
+  # extract prefix (e.g., "1_", "2_", etc.)
+  prefix <- substr(file_name, 1, 2)
+  
+  # set target directory based on prefix
+  target_subdirectory <- file.path(directory, prefix)
+  
+  # check whether target directory exists, or create one if not 
+  if (!file.exists(target_subdirectory)) {
+    dir.create(target_subdirectory)
+  }
+  # copy to target_subdirectory
+  file.rename(file, file.path(target_subdirectory, file_name))
+  # or:
+  # file.copy(file, file.path(target_subdirectory, file_name))
+}
+
+
+# merge data per category (01:18)
 
 multmerge = function(mypath){
   filenames=list.files(path=mypath, full.names=TRUE)
@@ -611,192 +373,340 @@ multmerge = function(mypath){
   Reduce(function(x,y) {merge(x,y,all = TRUE)}, datalist)
 }
 
-#full_data = multmerge("~/Desktop/test of diversity saturation/FD/1/merged.csv")
+
+for(i in sprintf("%02d", 1:18)) {
+  mymergeddata_i <- multmerge(paste("~/results/genetic_diversity/", i, sep = ""))
+  
+  res_i <- aggregate(mymergeddata_i[, 2], list(mymergeddata_i$X), mean)
+  
+  write.csv(res_i, file = paste("merged_", i, ".csv", sep = ""))
+  
+}
+
+
+# create results folder and move intermediate files "merged_*.csv into it 
+
+# create folders in directory
+dir.create(file.path(directory, "results"), recursive = TRUE)
+
+current_directories = list.dirs(directory, full.names = TRUE, recursive = FALSE)
+
+results_directory <- grep("results", current_directories, value = TRUE)
+
+files <- list.files(directory, pattern = "^merged_[0-9]{2}\\.csv$", full.names = TRUE)
+
+# move files to the destination directory
+for (file in files) {
+  file.rename(file, file.path("results", basename(file)))
+}
 
 
 
-mymergeddata_1 = multmerge("~/Desktop/test of diversity saturation/GD/1/")
+results = multmerge("~/example/test/genetic_diversity/results/")
 
-res_1<-aggregate(mymergeddata_1[, 2], list(mymergeddata_1$X), mean)
+results$replicate <- rep(1:18, times = 13)
 
-
-mymergeddata_2 = multmerge("~/Desktop/test of diversity saturation/GD/2/")
-res_2<-aggregate(mymergeddata_2[, 2], list(mymergeddata_2$X), mean, na.rm=TRUE)
-
-mymergeddata_3 = multmerge("~/Desktop/test of diversity saturation/GD/3/")
-res_3<-aggregate(mymergeddata_3[, 2], list(mymergeddata_3$X), mean, na.rm=TRUE)
-
-
-mymergeddata_4 = multmerge("~/Desktop/test of diversity saturation/GD/4/")
-res_4<-aggregate(mymergeddata_4[, 2], list(mymergeddata_4$X), mean, na.rm=TRUE)
-
-mymergeddata_5 = multmerge("~/Desktop/test of diversity saturation/GD/5/")
-res_5<-aggregate(mymergeddata_5[, 2], list(mymergeddata_5$X), mean, na.rm=TRUE)
-
-mymergeddata_6 = multmerge("~/Desktop/test of diversity saturation/GD/6/")
-res_6<-aggregate(mymergeddata_6[, 2], list(mymergeddata_6$X), mean, na.rm=TRUE)
-
-mymergeddata_7 = multmerge("~/Desktop/test of diversity saturation/GD/7/")
-res_7<-aggregate(mymergeddata_7[, 2], list(mymergeddata_7$X), mean, na.rm=TRUE)
-
-mymergeddata_8 = multmerge("~/Desktop/test of diversity saturation/GD/8/")
-res_8<-aggregate(mymergeddata_8[, 2], list(mymergeddata_8$X), mean, na.rm=TRUE)
-
-mymergeddata_9 = multmerge("~/Desktop/test of diversity saturation/GD/9/")
-res_9<-aggregate(mymergeddata_9[, 2], list(mymergeddata_9$X), mean, na.rm=TRUE)
-
-mymergeddata_10 = multmerge("~/Desktop/test of diversity saturation/GD/10/")
-res_10<-aggregate(mymergeddata_10[, 2], list(mymergeddata_10$X), mean, na.rm=TRUE)
-
-mymergeddata_11 = multmerge("~/Desktop/test of diversity saturation/GD/11/")
-res_11<-aggregate(mymergeddata_11[, 2], list(mymergeddata_11$X), mean, na.rm=TRUE)
-
-mymergeddata_12 = multmerge("~/Desktop/test of diversity saturation/GD/12/")
-res_12<-aggregate(mymergeddata_12[, 2], list(mymergeddata_12$X), mean, na.rm=TRUE)
-
-mymergeddata_13 = multmerge("~/Desktop/test of diversity saturation/GD/13/")
-res_13<-aggregate(mymergeddata_13[, 2], list(mymergeddata_13$X), mean, na.rm=TRUE)
-
-
-mymergeddata_14 = multmerge("~/Desktop/test of diversity saturation/GD/14/")
-res_14<-aggregate(mymergeddata_14[, 2], list(mymergeddata_14$X), mean, na.rm=TRUE)
-
-mymergeddata_15 = multmerge("~/Desktop/test of diversity saturation/GD/15/")
-res_15<-aggregate(mymergeddata_15[, 2], list(mymergeddata_15$X), mean, na.rm=TRUE)
-
-mymergeddata_16 = multmerge("~/Desktop/test of diversity saturation/GD/16/")
-res_16<-aggregate(mymergeddata_16[, 2], list(mymergeddata_16$X), mean, na.rm=TRUE)
-
-mymergeddata_17 = multmerge("~/Desktop/test of diversity saturation/GD/17/")
-res_17<-aggregate(mymergeddata_17[, 2], list(mymergeddata_17$X), mean, na.rm=TRUE)
-
-mymergeddata_18 = multmerge("~/Desktop/test of diversity saturation/GD/18/")
-res_18<-aggregate(mymergeddata_18[, 2], list(mymergeddata_18$X), mean, na.rm=TRUE)
-
-
-write.csv(res_1, file="merged_1.csv")
-write.csv(res_2, file="merged_2.csv")
-write.csv(res_3, file="merged_3.csv")
-write.csv(res_4, file="merged_4.csv")
-write.csv(res_5, file="merged_5.csv")
-write.csv(res_6, file="merged_6.csv")
-write.csv(res_7, file="merged_7.csv")
-write.csv(res_8, file="merged_8.csv")
-write.csv(res_9, file="merged_9.csv")
-write.csv(res_10, file="merged_10.csv")
-write.csv(res_11, file="merged_11.csv")
-write.csv(res_12, file="merged_12.csv")
-write.csv(res_13, file="merged_13.csv")
-write.csv(res_14, file="merged_14.csv")
-write.csv(res_15, file="merged_15.csv")
-write.csv(res_16, file="merged_16.csv")
-write.csv(res_17, file="merged_17.csv")
-write.csv(res_18, file="merged_18.csv")
-
-
-full_data_2 = multmerge("~/Desktop/test of diversity saturation/GD/res")
-full_data_2$replicate<-c(1:18,1:18,1:18,1:18,1:18,1:18,1:18,1:18,1:18,1:18,1:18,1:18,1:18)
-
-write.csv(full_data_2, file="final.csv")
+write.csv(results, file="results_genetic_diversity_GD.csv")
 
 
 
-#install.packages("Rfast")
+#### plot saturation curves ####
+
+if (!requireNamespace("Rfast", quietly = TRUE))
+  install.packages("Rfast", repo="http://cran.rstudio.com/")
 library(Rfast)
 
-full_data_3<-read.csv(file="final.csv")
+
+### GD ~ number of chosen samples (across all 13 populations)
+
+#plot(results$x ~ results$replicate, type="p", pch=16, cex=1.0, cex.lab=1.5, cex.axis=1.5, xlab="no. of X", ylab="GD", main="total", cex.main=1.5)
 
 
+# create subsets and plots 
 
-plot(full_data_3$x ~ full_data_3$replicate, type="p", pch=16, cex=2.5, cex.lab=1.5, cex.axis=1.5, xlab="no. of X", ylab="GD", main="total", cex.main=1.5)
+# create list of group/pop_ids given in "results"
+group_values <- unique(results$Group.1)
 
+# create an empty list to store subsets
+dat_list <- list()
 
-
-#subets
-
-dat_Ba<-subset(full_data_3, full_data_3$Group.1=="Ba_19")
-dat_Bo<-subset(full_data_3, full_data_3$Group.1=="Bo_20")
-dat_Di<-subset(full_data_3, full_data_3$Group.1=="Di_20")
-dat_Eh<-subset(full_data_3, full_data_3$Group.1=="Eh_20")
-dat_Er<-subset(full_data_3, full_data_3$Group.1=="Er_20")
-dat_Gr<-subset(full_data_3, full_data_3$Group.1=="Gr_19")
-dat_Ha<-subset(full_data_3, full_data_3$Group.1=="Ha_20")
-dat_If<-subset(full_data_3, full_data_3$Group.1=="If_18")
-dat_KW<-subset(full_data_3, full_data_3$Group.1=="KW_20")
-dat_Ni<-subset(full_data_3, full_data_3$Group.1=="Ni_20")
-dat_Sa<-subset(full_data_3, full_data_3$Group.1=="Sa_20")
-dat_St<-subset(full_data_3, full_data_3$Group.1=="St_19")
-dat_Wo<-subset(full_data_3, full_data_3$Group.1=="Wo_20")
+# loop over each unique group value and create subsets
+for (group_value in group_values) {
+  # Subset the results based on the current group value
+  dat_list[[group_value]] <- subset(results, Group.1 == group_value)
+}
 
 
-# plot
+# create an empty list to store the plots
+plot_list <- list()
+
+# set graphic parameters
+
 par(mar=c(5.1,4.1,4.1,2.1) +  0.4)
-par(mfrow=c(3,5))
+par(mfrow=c(4,4))
 
-plot(dat_KW$x ~ dat_KW$replicate, type="p", pch=16, cex=2.5, cex.lab=1.5, cex.axis=1.5, xlab="no. of samples", ylab="GD", main="KW", cex.main=1.5)
+# loop over each unique group value and create plots
+for (group_value in group_values) {
+  # extract the subset corresponding to the current group value
+  subset_data <- dat_list[[group_value]]
 
-plot(dat_Bo$x ~ dat_Bo$replicate, type="p", pch=16, cex=2.5, cex.lab=1.5, cex.axis=1.5, xlab="no. of samples", ylab="GD", main="Bo", cex.main=1.5)
-
-
-
-
-
-plot(dat_Ha$x ~ dat_Ha$replicate, type="p", pch=16, cex=2.5, cex.lab=1.5, cex.axis=1.5, xlab="no. of samples", ylab="GD", main="Ha", cex.main=1.5)
-
-
-
-plot(dat_Wo$x ~ dat_Wo$replicate, type="p", pch=16, cex=2.5, cex.lab=1.5, cex.axis=1.5, xlab="no. of samples", ylab="GD", main="Wo", cex.main=1.5)
-
-
-plot(dat_Ba$x ~ dat_Ba$replicate, type="p", pch=16, cex=2.5, cex.lab=1.5, cex.axis=1.5, xlab="no. of samples", ylab="GD", main="Ba", cex.main=1.5)
-
-
-plot(dat_St$x ~ dat_St$replicate, type="p", pch=16, cex=2.5, cex.lab=1.5, cex.axis=1.5, xlab="no. of samples", ylab="GD", main="St", cex.main=1.5)
-
-
-plot(dat_Sa$x ~ dat_Sa$replicate, type="p", pch=16, cex=2.5, cex.lab=1.5, cex.axis=1.5, xlab="no. of samples", ylab="GD", main="Sa", cex.main=1.5)
-
-
-plot(dat_If$x ~ dat_If$replicate, type="p", pch=16, cex=2.5, cex.lab=1.5, cex.axis=1.5, xlab="no. of samples", ylab="GD", main="If", cex.main=1.5)
+  # create a plot for the current subset
+  plot_list[[group_value]] <- plot(subset_data$replicate, subset_data$x, type="p", pch=16, cex=1.5, cex.lab=1.5, cex.axis=1.5, xlab="no. of samples", ylab="GD", main=group_value, cex.main=1.5)
+  
+  #### Assuming you have models fitted for each group value
+  # Here's a placeholder for the predict function
+  # Replace it with your actual model and prediction code
+  #predicted_values <- predict(model, newdata = subset_data)
+  
+  # Draw lines based on predicted values
+  #lines(subset_data$x, predicted_values, col = "red")
+  
+  # Store the plot in the plot_list
+  #plot_list[[group_value]] <- recordPlot()
+  
+  # Close the current plot
+  #dev.off()
+}
 
 
 
+##########
 
-plot(dat_Ni$x ~ dat_Ni$replicate, type="p", pch=16, cex=2.5, cex.lab=1.5, cex.axis=1.5, xlab="no. of samples", ylab="GD", main="Ni", cex.main=1.5)
+#### saturation of abiotic habitat heterogeneity (HD) ####
+#set working directory where R script is located, for example
+setwd("~/example/test/")
 
+# create directory "genetic_diversity"
+main_directory <- "~/example/test/"
 
+source_file <- "environmental_parameters.csv"
+destination_directory <- "habitat_heterogeneity"
 
-plot(dat_Di$x ~ dat_Di$replicate, type="p", pch=16, cex=2.5, cex.lab=1.5, cex.axis=1.5, xlab="no. of samples", ylab="GD", main="Di", cex.main=1.5)
+# check if the destination directory exists, if not create it
+if (!file.exists(destination_directory)) {
+  dir.create(destination_directory)
+}
 
-
-
-
-
-plot(dat_Er$x ~ dat_Er$replicate, type="p", pch=16, cex=2.5, cex.lab=1.5, cex.axis=1.5, xlab="no. of samples", ylab="GD", main="Er", cex.main=1.5)
-
-
-
-plot(dat_Gr$x ~ dat_Gr$replicate, type="p", pch=16, cex=2.5, cex.lab=1.5, cex.axis=1.5, xlab="no. of samples", ylab="GD", main="Gr", cex.main=1.5)
-
-
-plot(dat_Eh$x ~ dat_Eh$replicate, type="p", pch=16, cex=2.5, cex.lab=1.5, cex.axis=1.5, xlab="no. of samples", ylab="GD", main="Eh", cex.main=1.5)
-
-
+# copy the file to the destination directory
+file.copy(source_file, paste0(destination_directory, "/", source_file))
 
 
+# set working directory where csv*files are located, for example
+
+setwd("~/example/test/habitat_heterogeneity/")
+
+if (!requireNamespace("adegenet", quietly = TRUE))
+  install.packages("adegenet", repo="http://cran.rstudio.com/")
+library(adegenet)
+
+#### import data ####
+
+dat_1<-read.csv("environmental_parameters.csv", header=TRUE, sep = ",", dec=".")
+
+# check data
+head(dat_1)
+tail(dat_1)
+
+str(dat_1)
+summary(dat_1)
+
+if (!requireNamespace("dplyr", quietly = TRUE))
+  install.packages("dplyr", repo="http://cran.rstudio.com/")
+library(dplyr)
+
+
+#### calculate abiotic habitat heterogeneity (HD) between sample size 1-20 ####
+
+# Initialize results list
+results <- list()
+
+# create list of traits
+factors <- unique(colnames(dat_1[, 4:13]))
+
+for (k in 1:100) {  # replicates
+  for (i in 1:4) {  # sample size range
+    # convert 'i' to a string with two digits
+    i_str <- sprintf("%02d", i)
+    
+    # sample data
+    subset_i <- dat_1 %>%
+      group_by(location) %>%
+      sample_n(size = i)
+    
+    new1 <- NULL  # initialize new1 within the loop
+    
+    for (factor in factors) {
+      # calculate coefficient of variation per factor, sample size range, and iteration
+      varK_factor <- tapply(subset_i[[factor]], subset_i$location, sd, na.rm = TRUE) / 
+        tapply(subset_i[[factor]], subset_i$location, mean, na.rm = TRUE)
+      # store results in new1
+      new1[[paste0("varK_", factor)]] <- varK_factor
+    }
+    
+    # append new1 to the results list
+    results[[paste(i_str, k, "environmental_parameters_CV_diversity.csv", sep = "_")]] <- new1
+    
+    # write output
+    write.csv(new1, file = paste(i_str, k, "environmental_parameters_CV_diversity.csv", sep = "_"))
+  }
+}
+
+
+## create 4 folders and copy files into it
+# give directory name here
+directory <- "~/example/test/habitat_heterogeneity/"
+
+# check whether directory exists
+if (!file.exists(directory)) {
+  dir.create(directory)
+}
+
+
+# create folders in directory
+for (i in 1:4) {
+  folder_name <- sprintf("%02d", i)  # Format the number with leading zeros
+  dir.create(file.path(directory, folder_name), recursive = TRUE)
+}
+
+# create list of all subdirectories
+target_subdirectories <- list.dirs(directory, full.names = TRUE, recursive = FALSE)
+
+
+# copy files to respective folder
+files <- list.files(directory, pattern = "^\\d+_.*\\.csv$", full.names = TRUE)
+
+
+# iterate over data
+for (file in files) {
+  file_name <- basename(file)
+  
+  # extract prefix (e.g., "1_", "2_", etc.)
+  prefix <- substr(file_name, 1, 2)
+  
+  # set target directory based on prefix
+  target_subdirectory <- file.path(directory, prefix)
+  
+  # check whether target directory exists, or create one if not 
+  if (!file.exists(target_subdirectory)) {
+    dir.create(target_subdirectory)
+  }
+  # copy to target_subdirectory
+  file.rename(file, file.path(target_subdirectory, file_name))
+  # or:
+  # file.copy(file, file.path(target_subdirectory, file_name))
+}
+
+
+# merge data per category (01:05)
+
+multmerge = function(mypath){
+  filenames=list.files(path=mypath, full.names=TRUE)
+  datalist = lapply(filenames, function(x){read.csv(file=x,header=T)})
+  Reduce(function(x,y) {merge(x,y,all = TRUE)}, datalist)
+}
+
+
+for(i in sprintf("%02d", 1:5)) {
+  mymergeddata_i <- multmerge(paste("~/results/habitat_heterogeneity/", i, sep = ""))
+  
+  res_i <- aggregate(mymergeddata_i[, 2], list(mymergeddata_i$X), mean)
+  
+  write.csv(res_i, file = paste("merged_", i, ".csv", sep = ""))
+  
+}
+
+
+# create results folder and move intermediate files "merged_*.csv into it 
+
+# create folders in directory
+dir.create(file.path(directory, "results"), recursive = TRUE)
+
+current_directories = list.dirs(directory, full.names = TRUE, recursive = FALSE)
+
+results_directory <- grep("results", current_directories, value = TRUE)
+
+files <- list.files(directory, pattern = "^merged_[0-9]{2}\\.csv$", full.names = TRUE)
+
+# move files to the destination directory
+for (file in files) {
+  file.rename(file, file.path("results", basename(file)))
+}
 
 
 
+results = multmerge("~/example/test/habitat_heterogeneity/results/")
 
-#### I hope that this exemplary R script was useful for you to calculate saturation of diversity variables. Please do not hesitat to contact me!####
+# replicate size = 1 can only lead to CV=0 (NA) (in contrast, in GD, replicate size = 1 leads to positive HE values because genotypes can be heterozygous)
+
+#tapply(results$x, results$Group.1, length)
+
+temp <- rep(c(2, 3, 4, 1), times = 13)
+
+results$replicate <- temp
+
+results$x[is.na(results$x)] <- 0
+
+write.csv(results, file="environmental_parameter_diversity_HD.csv")
 
 
 
+#### plot saturation curves ####
+
+if (!requireNamespace("Rfast", quietly = TRUE))
+  install.packages("Rfast", repo="http://cran.rstudio.com/")
+library(Rfast)
 
 
+### HD ~ number of chosen samples (across all 13 populations)
+
+#plot(results$x ~ results$replicate, type="p", pch=16, cex=1.0, cex.lab=1.5, cex.axis=1.5, xlab="no. of X", ylab="iFDCV", main="total", cex.main=1.5)
 
 
+# create subsets and plots 
 
+# create list of group/pop_ids given in "results"
+group_values <- unique(results$Group.1)
+
+# create an empty list to store subsets
+dat_list <- list()
+
+# loop over each unique group value and create subsets
+for (group_value in group_values) {
+  # Subset the results based on the current group value
+  dat_list[[group_value]] <- subset(results, Group.1 == group_value)
+}
+
+
+# create an empty list to store the plots
+plot_list <- list()
+
+# set graphic parameters
+
+par(mar=c(5.1,4.1,4.1,2.1) +  0.4)
+par(mfrow=c(4,4))
+
+# loop over each unique group value and create plots
+for (group_value in group_values) {
+  # extract the subset corresponding to the current group value
+  subset_data <- dat_list[[group_value]]
+  
+  # create a plot for the current subset
+  plot_list[[group_value]] <- plot(subset_data$replicate, subset_data$x, type="p", pch=16, cex=1.5, cex.lab=1.5, cex.axis=1.5, xlab="no. of samples", ylab="HD", main=group_value, cex.main=1.5)
+  
+  #### Assuming you have models fitted for each group value
+  # Here's a placeholder for the predict function
+  # Replace it with your actual model and prediction code
+  #predicted_values <- predict(model, newdata = subset_data)
+  
+  # Draw lines based on predicted values
+  #lines(subset_data$x, predicted_values, col = "red")
+  
+  # Store the plot in the plot_list
+  #plot_list[[group_value]] <- recordPlot()
+  
+  # Close the current plot
+  #dev.off()
+}
 
 
 
